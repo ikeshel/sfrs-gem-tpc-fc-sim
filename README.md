@@ -3,8 +3,10 @@
 C++17 / Garfield++ project for inspecting the drift-cage electric field.
 CPU operation is sufficient; CUDA is not required.
 
-**Status:** project foundation. Detector geometry and operating voltages are
-pending. `config/uniform.cfg` is an artificial validation fixture, not the
+**Status:** project foundation. The supplied CAD mesh and Gmsh inspection source
+are in [geometry/](geometry/README.md). Geometry units, electrode assignments
+and operating voltages remain to be confirmed.
+`config/uniform.cfg` is an artificial validation fixture, not the
 Super-FRS detector. No detector field-uniformity prediction is provided yet.
 
 ## Build

@@ -12,6 +12,7 @@ _deps
 /build*/
 /results/
 /fieldmaps/
+/geometry/generated/
 __pycache__/
 CMakeUserPresets.json
 
