@@ -14,7 +14,7 @@ if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME uniform-field-validation
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_uniform.py"
-      "$<TARGET_FILE:tpc-field>" "${CMAKE_CURRENT_SOURCE_DIR}/config/uniform.cfg")
+      "$<TARGET_FILE:tpc-field>" "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/uniform.cfg")
   add_test(NAME elmer-import-validation
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_elmer.py"
       "$<TARGET_FILE:tpc-field>")

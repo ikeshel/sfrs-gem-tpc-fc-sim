@@ -48,9 +48,29 @@ the build-time validation tests. Adjust the Garfield++ install path above if nee
 ./build/tpc-field uniform config/uniform.cfg results/uniform.csv
 ```
 
-The artificial example spans z = 0 to 10 cm, with -1000 V at the cathode and
-0 V at the anode: Ez = -100 V/cm and V(z) = -1000 + 100 z V.
-It verifies sampling and E = -grad(V), not electrodes, fringe fields or space charge.
+`config/uniform.cfg` is editable: its bounds and voltages define your uniform
+field run. This mode does not solve electrodes, fringe fields or space charge.
+The field is Ez = (v_cathode - v_anode)/(z_max - z_min).
+
+CTest uses a separate fixed file, `tests/fixtures/uniform.cfg`, with -1000 V at
+z = 0 cm and 0 V at z = 10 cm. Its expected Ez is -100 V/cm. Editing the run
+configuration does not change that regression test. After pulling this change:
+
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$HOME/garfieldpp/install"
+cmake --build build -j4
+ctest --test-dir build --output-on-failure
+```
+
+CTest writes temporary CSVs; it does not refresh `results/uniform.csv`. After
+changing simulation settings, generate a new CSV and plot that file:
+
+```bash
+./build/tpc-field uniform config/uniform.cfg results/uniform_updated.csv
+python3 scripts/plot_field_zx_zy.py results/uniform_updated.csv --style both
+```
+
+Choose another output name if this CSV already exists.
 
 ## Visualize the field and sampling mesh
 
