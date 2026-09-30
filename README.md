@@ -9,21 +9,38 @@ and operating voltages remain to be confirmed.
 `config/uniform.cfg` is an artificial validation fixture, not the
 Super-FRS detector. No detector field-uniformity prediction is provided yet.
 
-## Build
+## Get the project and build (Debian 13)
+
+For a fresh checkout:
+
+```bash
+git clone --branch setup/garfield-project https://github.com/ikeshel/sfrs-gem-tpc-fc-sim.git
+cd sfrs-gem-tpc-fc-sim
+```
+
+For an existing checkout, commit or stash your edits before switching branches:
+
+```bash
+git fetch origin
+git switch setup/garfield-project
+git pull --ff-only
+```
+
+All commands below run from the repository root.
 
 Install ROOT and Garfield++ first; see [Debian setup](docs/debian.md).
 Use the compiler/C++ standard supported by your ROOT installation.
 
 ```bash
-source /path/to/garfield-install/share/Garfield/setupGarfield.sh
-cmake -S . -B build -DCMAKE_PREFIX_PATH=/path/to/garfield-install
+source $HOME/garfieldpp/install/share/Garfield/setupGarfield.sh
+cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/garfieldpp/install
 cmake --build build -j4
 ctest --test-dir build --output-on-failure
 ```
 
 The project links the installed `Garfield::Garfield` CMake target. It does not
-download dependencies or require a graphical session. Python 3 is used only for
-the validation test; use `-DBUILD_TESTING=OFF` to omit it.
+download dependencies or require a graphical session. Python 3 is used for validation and plotting; use `-DBUILD_TESTING=OFF` to omit
+the build-time validation tests. Adjust the Garfield++ install path above if needed.
 
 ## Uniform validation
 
@@ -34,6 +51,81 @@ the validation test; use `-DBUILD_TESTING=OFF` to omit it.
 The artificial example spans z = 0 to 10 cm, with -1000 V at the cathode and
 0 V at the anode: Ez = -100 V/cm and V(z) = -1000 + 100 z V.
 It verifies sampling and E = -grad(V), not electrodes, fringe fields or space charge.
+
+## Visualize the field and sampling mesh
+
+Install plotting dependencies:
+
+```bash
+sudo apt install python3-numpy python3-matplotlib
+```
+
+After generating `results/uniform.csv`, display both central slices with colored
+sampling cells and electric-field arrows:
+
+```bash
+python3 scripts/plot_field_zx_zy.py results/uniform.csv --style both
+```
+
+Other views:
+
+```bash
+# Sampling mesh only, shared field-magnitude color scale on both planes
+python3 scripts/plot_field_zx_zy.py results/uniform.csv --style mesh
+# Arrows and sample points, without colored cells
+python3 scripts/plot_field_zx_zy.py results/uniform.csv --style arrows
+# Single x-z slice at y = 0 cm
+python3 scripts/plot_field.py results/uniform.csv --y 0
+# Potential and Ez along x = y = 0
+python3 scripts/plot_uniformity.py results/uniform.csv
+# Save on a remote/headless machine without opening a window
+python3 scripts/plot_field_zx_zy.py results/uniform.csv --style both --no-show --output results/field_mesh.png
+```
+
+The zx view is the x-z plane at `--y` (default 0 cm); zy is the y-z plane
+at `--x` (default 0 cm). These must be sampled coordinates, not interpolated
+planes. Use `--view zx` or `--view zy` for one plane. All scripts accept
+`--help`, an input CSV, `--output` and `--no-show`. The original misspelled
+`plot_univormity.py` remains as a compatibility entry point.
+
+Colors show the full field magnitude; equal-length arrows show the direction
+of the field projected into each plane, not electron trajectories. Missing or
+invalid samples remain blank. Cells are centered on CSV sample coordinates,
+with edges halfway between neighbors; the outer cells extend half a spacing
+past the sampled range. This is a **sampling grid, not the finite-element mesh**.
+No interpolation across missing points is performed. PNGs default to the input
+CSV directory and are replaced when rerunning the same plot command.
+
+The initial grid is deliberately coarse (3 x 3 x 11). For a denser display,
+copy the config, increase nx/ny/nz, and write a new CSV:
+
+```bash
+cp config/uniform.cfg config/uniform_dense.cfg
+# Edit nx = 21, ny = 21 and nz = 101 in this copy.
+nano config/uniform_dense.cfg
+./build/tpc-field uniform config/uniform_dense.cfg results/uniform_dense.csv
+python3 scripts/plot_field_zx_zy.py results/uniform_dense.csv --style mesh
+```
+
+Existing simulation CSV files are protected against overwrite: choose a new
+output filename for another run. Refining this sampling grid does not refine
+an imported FEM solution.
+
+## View the geometry or actual FEM mesh
+
+```bash
+sudo apt install gmsh
+gmsh geometry/gmsh/GEM_TPC.geo
+```
+
+This opens the supplied STL triangle mesh, which has no field solution. In
+Gmsh's visibility/options controls, enable surface faces and surface edges.
+Once an actual volume mesh has been generated, open its `.msh` file in Gmsh
+and enable volume edges to inspect its tetrahedra. For field colors on the
+actual solver mesh, export the Elmer solution as VTU, open it in ParaView,
+choose **Surface With Edges**, and select the exported potential or electric
+field array. Neither a solved cage mesh nor VTU output exists in this project
+yet. The STL alone cannot display a cage electric field.
 
 ## Import a solved cage field
 
@@ -72,7 +164,8 @@ revision `60c55ca309c1d8734127e26a16548c9ddc496ba5` (CPU, GSL enabled).
 Both CTest cases pass: uniform potential/field checks and a synthetic Elmer
 tetrahedron checking interpolation, mm-to-cm conversion and out-of-map handling.
 The latter is an analytic importer fixture, not a mesh solved by Elmer.
-Debian 13 and a real detector field map remain to be validated.
+The user also verified the build, both CTest cases and the uniform run on
+Debian 13 with GNU 14.2.0. A real detector field map remains to be validated.
 
 ## References
 

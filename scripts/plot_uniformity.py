@@ -1,4 +1,4 @@
-"""Compatibility entry point for the original misspelled script name."""
+"""Plot potential and longitudinal field along a sampled line."""
 from field_plot import main
 
 if __name__ == "__main__":
