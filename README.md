@@ -131,6 +131,27 @@ Existing simulation CSV files are protected against overwrite: choose a new
 output filename for another run. Refining this sampling grid does not refine
 an imported FEM solution.
 
+## Display the full sampled field in 3D
+
+```bash
+python3 scripts/plot_field_3d.py results/uniform.csv
+# Use your newly generated CSV after changing configuration:
+python3 scripts/plot_field_3d.py results/updated.csv
+# Save without opening a window:
+python3 scripts/plot_field_3d.py results/uniform.csv --no-show --output results/field_3d.png
+```
+
+Drag in the Matplotlib window to rotate the view. Colored points indicate |E|;
+black arrows show 3D field direction at equal length. Axis proportions preserve
+physical dimensions. Invalid samples are excluded. Above 2,000 valid samples,
+the plot displays evenly spaced rows to keep interaction responsive; increase
+`--max-arrows` to show more (the title reports the displayed count). The color
+scale and spatial bounds use all valid samples. `--elev` and `--azim` set the
+initial view angle in degrees. PNG exports are static and replaced on rerun.
+
+This shows the sampled field volume, not the STL, tetrahedral mesh or electron
+trajectories. The uniform example will show parallel arrows throughout.
+
 ## View the geometry or actual FEM mesh
 
 ```bash
