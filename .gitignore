@@ -4,11 +4,17 @@ CMakeFiles
 CMakeScripts
 Testing
 Makefile
+!/Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+/build*/
+##/results/
+/fieldmaps/
+/geometry/generated/
+__pycache__/
 CMakeUserPresets.json
 
 # CLion
