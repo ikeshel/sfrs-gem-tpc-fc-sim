@@ -42,6 +42,31 @@ The project links the installed `Garfield::Garfield` CMake target. It does not
 download dependencies or require a graphical session. Python 3 is used for validation and plotting; use `-DBUILD_TESTING=OFF` to omit
 the build-time validation tests. Adjust the Garfield++ install path above if needed.
 
+## Build, test and run with Make
+
+Initialize your installed environment once per shell, then run:
+
+```bash
+source "$HOME/garfieldpp/install/share/Garfield/setupGarfield.sh"
+make
+```
+
+`make` (or `make run`) runs CMake configuration, compilation with four jobs,
+CTest, and the uniform simulation in order. It uses `config/uniform.cfg` and
+writes `results/new_setup.csv`. Any failed step stops the sequence.
+
+```bash
+make build                         # Configure and compile only
+make test                          # Configure, compile and test
+make OUTPUT=results/new_setup_2.csv # Full workflow with a fresh output name
+make JOBS=8 GARFIELD_PREFIX="$HOME/garfieldpp/install"
+make CONFIG=config/uniform_dense.cfg OUTPUT=results/dense.csv
+```
+
+Override `BUILD_DIR` if needed. Existing simulation CSVs are never overwritten;
+choose a fresh `OUTPUT` for repeated runs. `make` runs the uniform approximation,
+not the seven-electrode Elmer solve.
+
 ## Uniform validation
 
 ```bash
