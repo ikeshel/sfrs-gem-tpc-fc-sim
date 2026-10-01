@@ -2,6 +2,7 @@
 import argparse
 from pathlib import Path
 import numpy as np
+from field_csv import load_field_csv
 
 
 def main(default_view="both", line=False):
@@ -9,8 +10,8 @@ def main(default_view="both", line=False):
     parser.add_argument("input", nargs="?", default="results/uniform.csv")
     parser.add_argument("--output", type=Path, help="Output file; both planes append _zx and _zy to its stem")
     parser.add_argument("--no-show", action="store_true", help="Save without a GUI")
-    parser.add_argument("--x", type=float, default=0, help="x coordinate for zy slice / line [cm]")
-    parser.add_argument("--y", type=float, default=0, help="y coordinate for zx slice / line [cm]")
+    parser.add_argument("--x", type=float, default=0, help="x coordinate for zy slice / line [mm]")
+    parser.add_argument("--y", type=float, default=0, help="y coordinate for zx slice / line [mm]")
     parser.add_argument("--view", choices=["zx", "zy", "both"], default=default_view)
     parser.add_argument("--style", choices=["arrows", "mesh", "both"], default="both")
     args = parser.parse_args()
@@ -22,8 +23,8 @@ def main(default_view="both", line=False):
 
     figures = []
     try:
-        data = np.atleast_1d(np.genfromtxt(args.input, delimiter=",", names=True))
-        keys = ["x_cm", "y_cm", "z_cm", "potential_V", "Ex_V_per_cm", "Ey_V_per_cm", "Ez_V_per_cm", "status"]
+        data = load_field_csv(args.input)
+        keys = ["x_mm", "y_mm", "z_mm", "potential_V", "Ex_V_per_cm", "Ey_V_per_cm", "Ez_V_per_cm", "status"]
         if not data.size or not set(keys).issubset(data.dtype.names or ()):
             raise ValueError("Empty CSV or missing required tpc-field columns")
         if not all(np.isfinite(data[k]).all() for k in keys[:3]):
@@ -35,11 +36,11 @@ def main(default_view="both", line=False):
             raise ValueError("No valid field samples")
         near = lambda values, target: np.isclose(values, target, rtol=0, atol=1e-9)
         if line:
-            samples = data[near(data["x_cm"], args.x) & near(data["y_cm"], args.y)]
+            samples = data[near(data["x_mm"], args.x) & near(data["y_mm"], args.y)]
             if not samples.size:
                 raise ValueError("No samples on requested line; choose sampled --x and --y coordinates")
-            samples = np.sort(samples, order="z_cm")
-            if len(np.unique(samples["z_cm"])) != len(samples):
+            samples = np.sort(samples, order="z_mm")
+            if len(np.unique(samples["z_mm"])) != len(samples):
                 raise ValueError("Duplicate line coordinates")
             fig, axes = plt.subplots(2, 1, sharex=True, figsize=(7, 6), constrained_layout=True)
             for ax, key, label in zip(axes, ["potential_V", "Ez_V_per_cm"], ["Potential [V]", "Ez [V/cm]"]):
@@ -47,27 +48,27 @@ def main(default_view="both", line=False):
                 values[(samples["status"] != 0) | ~np.isfinite(values)] = np.nan
                 if not np.isfinite(values).any():
                     raise ValueError("No valid samples on requested line")
-                ax.plot(samples["z_cm"], values, "o-")
+                ax.plot(samples["z_mm"], values, "o-")
                 ax.set_ylabel(label)
                 ax.grid(alpha=.3)
-            axes[-1].set_xlabel("z [cm]")
-            fig.suptitle(f"{Path(args.input).name}: x={args.x:g}, y={args.y:g} cm")
+            axes[-1].set_xlabel("z [mm]")
+            fig.suptitle(f"{Path(args.input).name}: x={args.x:g}, y={args.y:g} mm")
             figures.append((fig, None, "field_line.png"))
         else:
             planes = []
             for view, fixed, target, horizontal, component in [
-                ("zx", "y_cm", args.y, "x_cm", "Ex_V_per_cm"),
-                ("zy", "x_cm", args.x, "y_cm", "Ey_V_per_cm")]:
+                ("zx", "y_mm", args.y, "x_mm", "Ex_V_per_cm"),
+                ("zy", "x_mm", args.x, "y_mm", "Ey_V_per_cm")]:
                 if args.view not in (view, "both"):
                     continue
                 mask = near(data[fixed], target)
                 if not mask.any() or not valid[mask].any():
                     raise ValueError(f"No valid samples on {view} slice at {fixed}={target}; choose a sampled coordinate")
                 sample = data[mask]
-                h, z = np.unique(sample[horizontal]), np.unique(sample["z_cm"])
+                h, z = np.unique(sample[horizontal]), np.unique(sample["z_mm"])
                 if len(h) < 2 or len(z) < 2:
                     raise ValueError("Each plane requires at least two coordinates along each axis")
-                ih, iz = np.searchsorted(h, sample[horizontal]), np.searchsorted(z, sample["z_cm"])
+                ih, iz = np.searchsorted(h, sample[horizontal]), np.searchsorted(z, sample["z_mm"])
                 if len(set(zip(ih, iz))) != len(sample):
                     raise ValueError("Duplicate plane coordinates")
                 grids = []
@@ -75,7 +76,7 @@ def main(default_view="both", line=False):
                     grid = np.full((len(z), len(h)), np.nan)
                     grid[iz, ih] = np.where(valid[mask], values, np.nan)
                     grids.append(np.ma.masked_invalid(grid))
-                planes.append((h, z, grids, horizontal[0], f"{view}: {fixed[0]} = {target:g} cm"))
+                planes.append((h, z, grids, horizontal[0], f"{view}: {fixed[0]} = {target:g} mm"))
             magnitudes = np.concatenate([p[2][0].compressed() for p in planes])
             lo, hi = magnitudes.min(), magnitudes.max()
             if np.isclose(lo, hi):
@@ -96,7 +97,7 @@ def main(default_view="both", line=False):
                     length = .4*min(np.diff(h).min(), np.diff(z).min())
                     ax.quiver(h, z, eh/denominator, ez/denominator, angles="xy", scale_units="xy",
                               scale=1/length, pivot="mid", color="black")
-                ax.set(xlabel=f"{label} [cm]", ylabel="z [cm]", title=title, aspect="equal")
+                ax.set(xlabel=f"{label} [mm]", ylabel="z [mm]", title=title, aspect="equal")
                 fig.colorbar(colors, ax=ax, label="|E| [V/cm]", shrink=.8)
                 fig.suptitle(f"{Path(args.input).name}: sampling grid (not FEM mesh)\nArrows: projected direction; blank cells: invalid/missing")
                 view = "zx" if label == "x" else "zy"

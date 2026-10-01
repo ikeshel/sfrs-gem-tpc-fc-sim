@@ -30,7 +30,7 @@ Bounding box in the original, unspecified units:
 | y | -50 | 50 |
 | z | -96 | 0 |
 
-The uniform-field example's cm units and z drift axis are independent of this
+The uniform-field example's mm units and z drift axis are independent of this
 CAD file. Confirm units, orientation, electrode identities and operating
 voltages before connecting this geometry to the simulation.
 

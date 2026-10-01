@@ -80,7 +80,7 @@ or intentionally remove old generated files before regeneration.
 `config/uniform.cfg` now uses the confirmed endpoint polarity; its existing
 sampling dimensions are retained. This independent ideal-field mode has **no
 intermediate electrode geometry** and does not read `electrodes.json`.
-With its present z length of 10 cm, Ez = -420 V/cm. Regenerate a new CSV:
+With its present z length of 10 mm, Ez = -4200 V/cm. Regenerate a new CSV:
 
 ```bash
 ./build/tpc-field uniform config/uniform.cfg results/seven_electrode_ideal.csv

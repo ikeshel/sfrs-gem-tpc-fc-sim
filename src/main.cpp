@@ -16,13 +16,14 @@
 #include <string>
 
 namespace fs = std::filesystem;
+constexpr double kMmToCm = 0.1;
 using Config = std::map<std::string, double>;
 
 Config ReadConfig(const fs::path& path) {
   std::ifstream input(path);
   if (!input) throw std::runtime_error("Cannot read config: " + path.string());
-  const Config keys{{"x_min", 0}, {"x_max", 0}, {"y_min", 0}, {"y_max", 0},
-                    {"z_min", 0}, {"z_max", 0}, {"nx", 0}, {"ny", 0},
+  const Config keys{{"x_min_mm", 0}, {"x_max_mm", 0}, {"y_min_mm", 0}, {"y_max_mm", 0},
+                    {"z_min_mm", 0}, {"z_max_mm", 0}, {"nx", 0}, {"ny", 0},
                     {"nz", 0}, {"v_cathode", 0}, {"v_anode", 0}};
   Config cfg;
   std::string line;
@@ -39,7 +40,7 @@ Config ReadConfig(const fs::path& path) {
     if (eq == std::string::npos || !(stream >> key >> value) ||
         (stream >> extra) || !std::isfinite(value) || !keys.count(key) ||
         !cfg.emplace(key, value).second) {
-      throw std::runtime_error("Invalid/duplicate config entry at line " +
+      throw std::runtime_error("Invalid/duplicate config entry (coordinate keys must end in _mm) at line " +
                                std::to_string(lineNumber));
     }
   }
@@ -47,7 +48,7 @@ Config ReadConfig(const fs::path& path) {
     if (!cfg.count(entry.first)) throw std::runtime_error("Missing key: " + entry.first);
   }
   for (const std::string axis : {"x", "y", "z"}) {
-    if (cfg.at(axis + "_max") <= cfg.at(axis + "_min"))
+    if (cfg.at(axis + "_max_mm") <= cfg.at(axis + "_min_mm"))
       throw std::runtime_error("Invalid bounds for " + axis);
     const double n = cfg.at("n" + axis);
     if (n < 2 || n > 1000 || n != std::floor(n))
@@ -66,7 +67,7 @@ int main(int argc, char** argv) {
       std::cout << "Usage:\n  tpc-field uniform CONFIG OUTPUT.csv\n"
                    "  tpc-field elmer CONFIG OUTPUT.csv MAP_DIR UNIT MATERIAL_INDEX\n"
                    "UNIT: mm, cm, or m (mesh coordinates only). MATERIAL_INDEX: zero-based.\n"
-                   "Config/sample coordinates are always cm; fields V/cm; potentials V.\n";
+                   "Config keys *_mm and CSV coordinates are mm; fields V/cm; potentials V.\n";
       return 0;
     }
     if (argc < 2) throw std::runtime_error("Use --help for usage");
@@ -75,18 +76,19 @@ int main(int argc, char** argv) {
       throw std::runtime_error("Invalid arguments; use --help");
     const Config cfg = ReadConfig(argv[2]);
     const double ez0 = (cfg.at("v_cathode") - cfg.at("v_anode")) /
-                       (cfg.at("z_max") - cfg.at("z_min"));
+                       ((cfg.at("z_max_mm") - cfg.at("z_min_mm")) * kMmToCm);
     // A marker for the selected sampling material, NOT a gas transport model.
     Garfield::Medium samplingMedium;
     samplingMedium.EnableDrift();
     std::unique_ptr<Garfield::Component> field;
     if (mode == "uniform") {
       auto uniform = std::make_unique<Garfield::ComponentConstant>();
-      uniform->SetArea(cfg.at("x_min"), cfg.at("y_min"), cfg.at("z_min"),
-                       cfg.at("x_max"), cfg.at("y_max"), cfg.at("z_max"));
+      uniform->SetArea(cfg.at("x_min_mm") * kMmToCm, cfg.at("y_min_mm") * kMmToCm,
+                       cfg.at("z_min_mm") * kMmToCm, cfg.at("x_max_mm") * kMmToCm,
+                       cfg.at("y_max_mm") * kMmToCm, cfg.at("z_max_mm") * kMmToCm);
       uniform->SetMedium(&samplingMedium);
       uniform->SetElectricField(0, 0, ez0);
-      uniform->SetPotential(0, 0, cfg.at("z_min"), cfg.at("v_cathode"));
+      uniform->SetPotential(0, 0, cfg.at("z_min_mm") * kMmToCm, cfg.at("v_cathode"));
       field = std::move(uniform);
       std::cout << "UNIFORM VALIDATION FIXTURE: no cage electrodes or fringe fields.\n";
     } else {
@@ -121,10 +123,10 @@ int main(int argc, char** argv) {
     if (output.has_parent_path()) fs::create_directories(output.parent_path());
     std::ofstream csv(output);
     if (!csv) throw std::runtime_error("Cannot write output");
-    csv << "x_cm,y_cm,z_cm,potential_V,Ex_V_per_cm,Ey_V_per_cm,Ez_V_per_cm,"
+    csv << "x_mm,y_mm,z_mm,potential_V,Ex_V_per_cm,Ey_V_per_cm,Ez_V_per_cm,"
            "Etrans_over_abs_Ez,delta_Ez_over_Ez0,status\n" << std::setprecision(17);
     const auto coordinate = [&](const std::string& axis, int i) {
-      return cfg.at(axis + "_min") + i * (cfg.at(axis + "_max") - cfg.at(axis + "_min")) /
+      return cfg.at(axis + "_min_mm") + i * (cfg.at(axis + "_max_mm") - cfg.at(axis + "_min_mm")) /
              (cfg.at("n" + axis) - 1);
     };
     std::size_t valid = 0, invalid = 0;
@@ -137,7 +139,7 @@ int main(int argc, char** argv) {
           double ex = nan, ey = nan, ez = nan, v = nan;
           Garfield::Medium* medium = nullptr;
           int status = -99;
-          field->ElectricField(x, y, z, ex, ey, ez, v, medium, status);
+          field->ElectricField(x * kMmToCm, y * kMmToCm, z * kMmToCm, ex, ey, ez, v, medium, status);
           const bool ok = status == 0 && medium == &samplingMedium &&
                           std::isfinite(ex) && std::isfinite(ey) && std::isfinite(ez) && std::isfinite(v);
           double transverse = nan, deviation = nan;

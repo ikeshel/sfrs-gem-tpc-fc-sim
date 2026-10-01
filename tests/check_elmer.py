@@ -22,8 +22,8 @@ with tempfile.TemporaryDirectory() as tmp:
     (root / "out.result").write_text("Perm:\n" + "".join(f"{i}\n" for i in range(1, 11)) +
                                      "".join(f"{-100 + 10*z}\n" for x, y, z in nodes))
     cfg = root / "sample.cfg"
-    cfg.write_text("x_min=0.1\nx_max=0.2\ny_min=0.1\ny_max=0.2\n"
-                   "z_min=0.1\nz_max=0.2\nnx=2\nny=2\nnz=2\n"
+    cfg.write_text("x_min_mm=1\nx_max_mm=2\ny_min_mm=1\ny_max_mm=2\n"
+                   "z_min_mm=1\nz_max_mm=2\nnx=2\nny=2\nnz=2\n"
                    "v_cathode=-90\nv_anode=-80\n")
     output = root / "field.csv"
     subprocess.run([sys.argv[1], "elmer", str(cfg), str(output), str(root), "mm", "0"], check=True)
@@ -32,12 +32,12 @@ with tempfile.TemporaryDirectory() as tmp:
     assert len(rows) == 8
     for row in rows:
         assert int(row["status"]) == 0
-        assert math.isclose(float(row["potential_V"]), -100 + 100 * float(row["z_cm"]), abs_tol=1e-8)
+        assert math.isclose(float(row["potential_V"]), -100 + 10 * float(row["z_mm"]), abs_tol=1e-8)
         assert math.isclose(float(row["Ez_V_per_cm"]), -100, abs_tol=1e-8)
         assert abs(float(row["Ex_V_per_cm"])) < 1e-8
         assert abs(float(row["Ey_V_per_cm"])) < 1e-8
     # Sampling entirely outside the mesh must fail rather than report zero field.
-    cfg.write_text(cfg.read_text().replace("x_min=0.1", "x_min=2").replace("x_max=0.2", "x_max=3"))
+    cfg.write_text(cfg.read_text().replace("x_min_mm=1", "x_min_mm=20").replace("x_max_mm=2", "x_max_mm=30"))
     assert subprocess.run([sys.argv[1], "elmer", str(cfg), str(root / "outside.csv"),
                            str(root), "mm", "0"]).returncode == 2
 print("Elmer analytic import, unit conversion, field gradient and coverage checks passed.")

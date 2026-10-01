@@ -67,6 +67,33 @@ Override `BUILD_DIR` if needed. Existing simulation CSVs are never overwritten;
 choose a fresh `OUTPUT` for repeated runs. `make` runs the uniform approximation,
 not the seven-electrode Elmer solve.
 
+## Coordinate units (millimetres)
+
+All user sampling bounds use explicit keys: `x_min_mm`, `x_max_mm`,
+`y_min_mm`, `y_max_mm`, `z_min_mm`, `z_max_mm`. New CSVs contain
+`x_mm,y_mm,z_mm`; all plots and slice arguments use mm. Potential remains V
+and electric field remains V/cm. Conversion to Garfield++'s internal cm occurs
+at the field-component interface; Elmer mesh units are still specified independently.
+
+Old config keys such as `x_min` are rejected to prevent silent unit mistakes.
+To migrate an old **cm** config while preserving its physical dimensions,
+rename the coordinate keys with `_mm` and multiply their values by 10.
+For numbers originally intended as mm, rename the keys without scaling.
+The supplied run config follows the latter correction: x = ±100 mm,
+y = ±10 mm, z = 0–10 mm. This is still an ideal example, not CAD-derived gas bounds.
+Its 4200 V difference over 10 mm gives Ez = -4200 V/cm.
+
+Plot scripts also recognize legacy `x_cm,y_cm,z_cm` CSVs and convert their
+coordinates to mm. This displays the old physical model faithfully; it does
+not repair a simulation made with incorrect dimensions. Rebuild and generate
+a fresh CSV after this update, for example:
+
+```bash
+make OUTPUT=results/setup_mm.csv
+python3 scripts/plot_field_zx_zy.py results/setup_mm.csv --style both
+python3 scripts/plot_field_3d.py results/setup_mm.csv
+```
+
 ## Uniform validation
 
 ```bash
@@ -75,10 +102,10 @@ not the seven-electrode Elmer solve.
 
 `config/uniform.cfg` is editable: its bounds and voltages define your uniform
 field run. This mode does not solve electrodes, fringe fields or space charge.
-The field is Ez = (v_cathode - v_anode)/(z_max - z_min).
+The field in V/cm is Ez = 10*(v_cathode - v_anode)/(z_max_mm - z_min_mm).
 
 CTest uses a separate fixed file, `tests/fixtures/uniform.cfg`, with -1000 V at
-z = 0 cm and 0 V at z = 10 cm. Its expected Ez is -100 V/cm. Editing the run
+z = 0 mm and 0 V at z = 100 mm. Its expected Ez is -100 V/cm. Editing the run
 configuration does not change that regression test. After pulling this change:
 
 ```bash
@@ -125,7 +152,7 @@ Other views:
 python3 scripts/plot_field_zx_zy.py results/uniform.csv --style mesh
 # Arrows and sample points, without colored cells
 python3 scripts/plot_field_zx_zy.py results/uniform.csv --style arrows
-# Single x-z slice at y = 0 cm
+# Single x-z slice at y = 0 mm
 python3 scripts/plot_field.py results/uniform.csv --y 0
 # Potential and Ez along x = y = 0
 python3 scripts/plot_uniformity.py results/uniform.csv
@@ -133,8 +160,8 @@ python3 scripts/plot_uniformity.py results/uniform.csv
 python3 scripts/plot_field_zx_zy.py results/uniform.csv --style both --no-show --output results/field_mesh.png
 ```
 
-The zx view is the x-z plane at `--y` (default 0 cm); zy is the y-z plane
-at `--x` (default 0 cm). These must be sampled coordinates, not interpolated
+The zx view is the x-z plane at `--y` (default 0 mm); zy is the y-z plane
+at `--x` (default 0 mm). These must be sampled coordinates, not interpolated
 planes. Use `--view zx` or `--view zy` for one plane. All scripts accept
 `--help`, an input CSV, `--output` and `--no-show`. The original misspelled
 `plot_univormity.py` remains as a compatibility entry point.
@@ -227,10 +254,10 @@ This is a template: create `config/cage.cfg` and the map from the real detector
 first. Copy the example config and set the sampling bounds and resolution.
 The final argument is the **zero-based Garfield material index** of the gas;
 `mm` specifies only the source mesh unit. Config and CSV coordinates are always
-**cm**, potential **V**, field **V/cm**. The drift axis is z.
+**mm**, potential **V**, field **V/cm**. The drift axis is z.
 
 In map mode, config potentials and z bounds define only the nominal comparison
-field Ez0 = (V_cathode - V_anode)/(z_max - z_min); they do not modify the solution.
+field Ez0 = (V_cathode - V_anode)/((z_max_mm - z_min_mm)/10); they do not modify the solution.
 For that comparison, z bounds must correspond to the physical electrode positions.
 
 CSV contains potential, Ex/Ey/Ez, Etrans/|Ez|, signed (Ez-Ez0)/Ez0 and status.

@@ -2,6 +2,7 @@
 import argparse
 from pathlib import Path
 import numpy as np
+from field_csv import load_field_csv
 
 
 def main():
@@ -22,8 +23,8 @@ def main():
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize
     try:
-        data = np.atleast_1d(np.genfromtxt(args.input, delimiter=',', names=True))
-        keys = ['x_cm', 'y_cm', 'z_cm', 'Ex_V_per_cm', 'Ey_V_per_cm', 'Ez_V_per_cm', 'status']
+        data = load_field_csv(args.input)
+        keys = ['x_mm', 'y_mm', 'z_mm', 'Ex_V_per_cm', 'Ey_V_per_cm', 'Ez_V_per_cm', 'status']
         if not data.size or not set(keys).issubset(data.dtype.names or ()):
             raise ValueError('Empty CSV or missing required tpc-field columns')
         valid = data['status'] == 0
@@ -61,7 +62,7 @@ def main():
         for setter, center, width in zip([ax.set_xlim, ax.set_ylim, ax.set_zlim], centers, widths):
             setter(center-width/2, center+width/2)
         ax.set_box_aspect(widths)
-        ax.set(xlabel='x [cm]', ylabel='y [cm]', zlabel='z [cm]')
+        ax.set(xlabel='x [mm]', ylabel='y [mm]', zlabel='z [mm]')
         ax.view_init(elev=args.elev, azim=args.azim)
         ax.set_title(f'{Path(args.input).name}: sampled 3D electric field\n'
                      f'{len(indices)} of {len(values)} valid samples displayed; arrows show direction')
