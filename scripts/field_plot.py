@@ -7,7 +7,7 @@ import numpy as np
 def main(default_view="both", line=False):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", nargs="?", default="results/uniform.csv")
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("--output", type=Path, help="Output file; both planes append _zx and _zy to its stem")
     parser.add_argument("--no-show", action="store_true", help="Save without a GUI")
     parser.add_argument("--x", type=float, default=0, help="x coordinate for zy slice / line [cm]")
     parser.add_argument("--y", type=float, default=0, help="y coordinate for zx slice / line [cm]")
@@ -20,6 +20,7 @@ def main(default_view="both", line=False):
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize
 
+    figures = []
     try:
         data = np.atleast_1d(np.genfromtxt(args.input, delimiter=",", names=True))
         keys = ["x_cm", "y_cm", "z_cm", "potential_V", "Ex_V_per_cm", "Ey_V_per_cm", "Ez_V_per_cm", "status"]
@@ -51,7 +52,7 @@ def main(default_view="both", line=False):
                 ax.grid(alpha=.3)
             axes[-1].set_xlabel("z [cm]")
             fig.suptitle(f"{Path(args.input).name}: x={args.x:g}, y={args.y:g} cm")
-            default_output = "field_line.png"
+            figures.append((fig, None, "field_line.png"))
         else:
             planes = []
             for view, fixed, target, horizontal, component in [
@@ -81,8 +82,8 @@ def main(default_view="both", line=False):
                 pad = max(abs(lo)*.01, 1e-6)
                 lo, hi = max(0, lo-pad), hi+pad
             norm = Normalize(lo, hi)
-            fig, axes = plt.subplots(1, len(planes), figsize=(5*len(planes), 8), squeeze=False, constrained_layout=True)
-            for ax, (h, z, (mag, eh, ez), label, title) in zip(axes.flat, planes):
+            for h, z, (mag, eh, ez), label, title in planes:
+                fig, ax = plt.subplots(figsize=(7, 8), constrained_layout=True)
                 if args.style in ("mesh", "both"):
                     colors = ax.pcolormesh(h, z, mag, shading="nearest", cmap="viridis", norm=norm,
                                           edgecolors="0.6", linewidth=.4)
@@ -96,18 +97,26 @@ def main(default_view="both", line=False):
                     ax.quiver(h, z, eh/denominator, ez/denominator, angles="xy", scale_units="xy",
                               scale=1/length, pivot="mid", color="black")
                 ax.set(xlabel=f"{label} [cm]", ylabel="z [cm]", title=title, aspect="equal")
-            fig.colorbar(colors, ax=list(axes.flat), label="|E| [V/cm]", shrink=.8)
-            fig.suptitle(f"{Path(args.input).name}: sampling grid (not FEM mesh)\nArrows: projected direction; blank cells: invalid/missing")
-            default_output = f"field_{args.view}_{args.style}.png"
-        output = args.output or Path(args.input).parent / default_output
-        if output.resolve() == Path(args.input).resolve():
-            raise ValueError("Output must differ from input CSV")
-        output.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output, dpi=180)
-        print(f"Saved {output}; CSV valid samples: {valid.sum()}/{len(data)}")
+                fig.colorbar(colors, ax=ax, label="|E| [V/cm]", shrink=.8)
+                fig.suptitle(f"{Path(args.input).name}: sampling grid (not FEM mesh)\nArrows: projected direction; blank cells: invalid/missing")
+                view = "zx" if label == "x" else "zy"
+                figures.append((fig, view, f"field_{view}_{args.style}.png"))
+        outputs = []
+        for fig, view, default_output in figures:
+            output = args.output or Path(args.input).parent / default_output
+            if args.output and len(figures) > 1:
+                output = output.with_name(f"{output.stem}_{view}{output.suffix or '.png'}")
+            if output.resolve() == Path(args.input).resolve():
+                raise ValueError("Output must differ from input CSV")
+            outputs.append((fig, output))
+        for fig, output in outputs:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(output, dpi=180)
+            print(f"Saved {output}; CSV valid samples: {valid.sum()}/{len(data)}")
         if not args.no_show:
             plt.show()
-        plt.close(fig)
+        for fig, _, _ in figures:
+            plt.close(fig)
     except (OSError, ValueError, KeyError) as error:
         parser.exit(1, f"Error: {error}\n")
 

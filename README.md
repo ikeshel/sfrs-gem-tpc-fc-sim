@@ -80,12 +80,18 @@ Install plotting dependencies:
 sudo apt install python3-numpy python3-matplotlib
 ```
 
-After generating `results/uniform.csv`, display both central slices with colored
+After generating `results/uniform.csv`, display both central slices in separate figures with colored
 sampling cells and electric-field arrows:
 
 ```bash
 python3 scripts/plot_field_zx_zy.py results/uniform.csv --style both
 ```
+
+This opens two figure windows and saves `field_zx_both.png` and
+`field_zy_both.png` beside the CSV. Both figures use the same color scale.
+With `--output results/field.png`, the two files are named
+`results/field_zx.png` and `results/field_zy.png`. A single `--view zx` or
+`--view zy` uses the requested output filename unchanged.
 
 Other views:
 
