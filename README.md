@@ -168,6 +168,21 @@ choose **Surface With Edges**, and select the exported potential or electric
 field array. Neither a solved cage mesh nor VTU output exists in this project
 yet. The STL alone cannot display a cage electric field.
 
+## Seven-electrode potentials
+
+The new [seven-electrode setup](docs/electrodes.md) implements cathode -200 V,
+five shaping electrodes, and anode +4000 V. For provisional equal spacing:
+
+```bash
+python3 scripts/electrode_voltages.py config/electrodes.json
+```
+
+This gives -200, 500, 1200, 1900, 2600, 3300 and 4000 V. The script can also
+write Elmer boundary conditions after actual mesh boundary IDs are supplied.
+`GEM_TPC_v1.stl` is included; its units are mm. Electrode identification and
+volume meshing remain necessary before solving the physical cage field.
+See the linked guide for unequal spacing and the Elmer commands.
+
 ## Import a solved cage field
 
 Workflow: geometry/mesh in Gmsh, electrostatics in Elmer, then Garfield++ field

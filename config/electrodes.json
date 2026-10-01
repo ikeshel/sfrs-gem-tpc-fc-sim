@@ -1,0 +1,10 @@
+{
+  "description": "Cathode, five shaping electrodes, anode. Equal spacing is provisional; replace relative positions with measured drift-axis positions.",
+  "geometry": "geometry/stl/GEM_TPC_v1.stl",
+  "geometry_unit": "mm",
+  "drift_axis": null,
+  "cathode_V": -200,
+  "anode_V": 4000,
+  "position_unit": "relative",
+  "positions": [0, 1, 2, 3, 4, 5, 6]
+}

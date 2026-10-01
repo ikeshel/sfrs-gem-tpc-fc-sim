@@ -37,3 +37,14 @@ voltages before connecting this geometry to the simulation.
 Keep source STL and Gmsh scripts here. Put generated meshes under
 `geometry/generated/` and solved Elmer maps under `fieldmaps/`; both are ignored
 by Git. See [the field-map contract](../docs/geometry.md) for solver requirements.
+
+## Version 1 geometry
+
+`stl/GEM_TPC_v1.stl` is the new source (unchanged binary STL, 4,844 triangles,
+242,284 bytes). Its units are confirmed **mm**; its bounds are the same as the
+original table above. The drift axis and electrode surface identities remain
+unconfirmed. Open `gmsh/GEM_TPC_v1.geo` for surface inspection.
+
+SHA-256: `2b36fe768172f63f447001ef013ba81da596866ad0b7d7dc330c6d7effea541a`.
+
+See [seven-electrode setup](../docs/electrodes.md) for potentials.
